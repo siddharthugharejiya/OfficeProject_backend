@@ -212,3 +212,11 @@ export const edite_post = async (req, res) => {
         res.status(500).json({ message: "Update failed", error: err.message });
     }
 };
+
+
+export const Product_category = async (req,res) =>{
+    const category = req.params.category;
+   const data = await ProductModel.find({category:category});
+   res.json({message:"category",data:data});
+    
+}

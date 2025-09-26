@@ -4,7 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { AddProduct, Del, edite_get, edite_post, getProduct, Product_get, SingpleProduct } from '../Controller/ProductController.js';
+import { AddProduct, Del, edite_get, edite_post, getProduct, Product_category, Product_get, SingpleProduct } from '../Controller/ProductController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,5 +70,6 @@ router.delete('/del/:id', Del);
 router.get('/edite-get/:id', edite_get);
 router.get('/SinglePage/:id', SingpleProduct); // New route for fetching single product details
 router.put('/edite/:id', edite_post);
+router.get('/category/:id', Product_category);
 
 export default router;
