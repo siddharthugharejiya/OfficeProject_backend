@@ -214,9 +214,15 @@ export const edite_post = async (req, res) => {
 };
 
 
-export const Product_category = async (req,res) =>{
+export const Product_category = async (req, res) => {
     const category = req.params.category;
-   const data = await ProductModel.find({category:category});
-   res.json({message:"category",data:data});
+    console.log(category);
     
-}
+
+    try {
+        const data = await ProductModel.find({ category: category }); // MongoDB query
+        res.json({ message: "Category Products", data: data });
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching products", error });
+    }
+};
