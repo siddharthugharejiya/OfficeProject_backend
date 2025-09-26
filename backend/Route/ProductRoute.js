@@ -70,6 +70,6 @@ router.delete('/del/:id', Del);
 router.get('/edite-get/:id', edite_get);
 router.get('/SinglePage/:id', SingpleProduct); // New route for fetching single product details
 router.put('/edite/:id', edite_post);
-router.get('/category/:id', Product_category);
+router.get('/category/:category', Product_category);
 
 export default router;
