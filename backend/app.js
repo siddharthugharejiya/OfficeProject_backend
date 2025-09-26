@@ -25,7 +25,11 @@ const app = express();
 app.use('/uploads', express.static(uploadsDir));
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: ["https://frontend-weld-mu.vercel.app", "http://localhost:5173"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}))
 
 // Use your Product routes
 app.use("/", ProductRoutes);
