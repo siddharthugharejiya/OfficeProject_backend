@@ -26,7 +26,8 @@ app.use('/uploads', express.static(uploadsDir));
 
 app.use(express.json());
 app.use(cors({
-    origin: ["https://frontend-weld-mu.vercel.app", "http://localhost:5173"],
+    origin: ["https://office-project-frontend.vercel.app",
+        "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }))
