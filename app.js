@@ -21,9 +21,8 @@ console.log(uploadsDir);
 
 const app = express();
 
-// ✅ Serve static files from uploads directory (so only one /uploads prefix)
-app.use('/uploads', express.static(uploadsDir));
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json());
 app.use(cors({
     origin: ["https://office-project-frontend.vercel.app",
