@@ -21,12 +21,12 @@ const app = express();
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 app.use(cors({
-    origin: ["https://office-project-frontend.vercel.app",
-        "http://localhost:5173"],
+    origin: "*", // ✅ Allow all origins
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"]
-}))
+}));
 
 // Use your Product routes
 app.use("/", ProductRoutes);
