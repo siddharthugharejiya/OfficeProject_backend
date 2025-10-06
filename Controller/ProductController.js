@@ -40,23 +40,30 @@ export const upload = multer({
         }
     }
 });
-// === Helper: generate dynamic URL based on host ===
+
+// === Helper: generate dynamic URL with HTTPS ===
 const getFullImageUrl = (img, req) => {
     if (!img) return null;
 
-    // ✅ Base64
+    // ✅ Base64 images
     if (img.startsWith("data:image/")) return img;
 
-    // ✅ Already a full URL
-    if (img.startsWith("http")) return img;
+    // ✅ Already a full URL - FORCE HTTPS
+    if (img.startsWith("http")) {
+        return img.replace('http://', 'https://');
+    }
 
-    // ✅ Local uploads
+    // ✅ Local uploads - Use absolute HTTPS URL
     let cleanPath = img;
     if (cleanPath.startsWith('uploads/')) {
         cleanPath = cleanPath.replace('uploads/', '');
     }
+    if (cleanPath.startsWith('/')) {
+        cleanPath = cleanPath.slice(1);
+    }
 
-    return `${req.protocol}://${req.get("host")}/uploads/${cleanPath}`;
+    // ✅ Always use HTTPS for production
+    return `https://officeproject-backend.onrender.com/uploads/${cleanPath}`;
 };
 
 // Map array of images
@@ -274,6 +281,7 @@ export const edite_post = async (req, res) => {
     }
 };
 
+// === Get Products by Category ===
 export const Product_category = async (req, res) => {
     const category = req.params.category;
     try {
