@@ -1,19 +1,21 @@
-    {
+{
         "name": "backend",
         "version": "1.0.0",
         "description": "",
         "type": "module",
         "main": "app.js",
-       "scripts": {
-    "start": "node app.js"
-  },
+        "scripts": {
+                "start": "node app.js"
+        },
         "keywords": [],
         "author": "",
         "license": "ISC",
         "dependencies": {
-            "cors": "^2.8.5",
-            "express": "^5.1.0",
-            "mongoose": "^8.18.1",
-            "multer": "^2.0.2"
+                "cloudinary": "^1.41.3",
+                "cors": "^2.8.5",
+                "express": "^5.1.0",
+                "mongoose": "^8.18.1",
+                "multer": "^2.0.2",
+                "multer-storage-cloudinary": "^4.0.0"
         }
-    }
+}
