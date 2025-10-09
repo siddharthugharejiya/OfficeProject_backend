@@ -1,25 +1,23 @@
 import { ProductModel } from "../model/ProductModel.js";
 import multer from "multer";
-import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import path from "path";
+import fs from "fs";
 
-// ✅ Simple Cloudinary Configuration without complex options
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'Root',
-    api_key: process.env.CLOUDINARY_API_KEY || '449944619464392',
-    api_secret: process.env.CLOUDINARY_API_SECRET || 'vadgdi9q31peMzPoanckAJixhKc'
-});
-
-// ✅ Simple Cloudinary Storage without complex format handling
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'products',
-        public_id: (req, file) => {
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            return "image-" + uniqueSuffix;
-        },
+// ✅ Simple multer disk storage
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = 'uploads/';
+        // Create uploads directory if it doesn't exist
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
     },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, 'image-' + uniqueSuffix + ext);
+    }
 });
 
 export const upload = multer({
@@ -40,12 +38,12 @@ export const upload = multer({
 const getFullImageUrl = (img, req) => {
     if (!img) return null;
 
-    // ✅ Already a full URL (Cloudinary or other)
+    // ✅ Already a full URL
     if (img.startsWith("http")) {
         return img;
     }
 
-    // ✅ For backward compatibility with local uploads
+    // ✅ For local uploads
     if (img.startsWith('uploads/')) {
         return `${req.protocol}://${req.get('host')}/${img}`;
     }
@@ -75,7 +73,7 @@ export const AddProduct = async (req, res) => {
 
         let imageArray = [];
 
-        // ✅ Handle uploaded files (Cloudinary)
+        // ✅ Handle uploaded files (local storage)
         if (req.files && req.files.length > 0) {
             console.log(`📸 Found ${req.files.length} uploaded files`);
             const uploadedFiles = req.files.map(file => file.path);
@@ -189,7 +187,7 @@ export const Product_get = async (req, res) => {
     }
 };
 
-// === Delete Product with Cloudinary cleanup ===
+// === Delete Product ===
 export const Del = async (req, res) => {
     try {
         const product = await ProductModel.findById(req.params.id);
@@ -198,19 +196,14 @@ export const Del = async (req, res) => {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        // Delete images from Cloudinary
+        // Delete local image files
         if (product.Image && product.Image.length > 0) {
             for (const imageUrl of product.Image) {
-                if (imageUrl.includes('cloudinary.com')) {
-                    // Extract public_id from Cloudinary URL
-                    const urlParts = imageUrl.split('/');
-                    const publicIdWithExtension = urlParts[urlParts.length - 1];
-                    const publicId = 'products/' + publicIdWithExtension.split('.')[0];
-
-                    try {
-                        await cloudinary.uploader.destroy(publicId);
-                    } catch (cloudinaryError) {
-                        console.log('Error deleting from Cloudinary:', cloudinaryError);
+                // Only delete local files, not URL links
+                if (imageUrl.startsWith('uploads/')) {
+                    const filePath = imageUrl;
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
                     }
                 }
             }
@@ -244,7 +237,7 @@ export const edite_get = async (req, res) => {
     }
 };
 
-// === Edit POST with Cloudinary ===
+// === Edit POST ===
 export const edite_post = async (req, res) => {
     try {
         const { name, title, des, rating, price, weight, tag, category, linkImages } = req.body;
@@ -258,10 +251,22 @@ export const edite_post = async (req, res) => {
 
         let imageArray = [];
 
-        // ✅ Handle uploaded files (Cloudinary)
+        // ✅ Handle uploaded files (local storage)
         if (req.files && req.files.length > 0) {
             const uploadedFiles = req.files.map(file => file.path);
             imageArray = [...uploadedFiles];
+
+            // Delete old local images
+            if (existingProduct.Image && existingProduct.Image.length > 0) {
+                for (const oldImage of existingProduct.Image) {
+                    if (oldImage.startsWith('uploads/') && fs.existsSync(oldImage)) {
+                        fs.unlinkSync(oldImage);
+                    }
+                }
+            }
+        } else {
+            // Keep existing images if no new files uploaded
+            imageArray = [...existingProduct.Image];
         }
 
         // ✅ Handle link images (from frontend)
@@ -272,6 +277,7 @@ export const edite_post = async (req, res) => {
                     const validLinks = linkImagesArray.filter(link =>
                         link && typeof link === 'string' && link.startsWith('http')
                     );
+                    // Add link images to existing array
                     imageArray = [...imageArray, ...validLinks];
                 }
             } catch (e) {
@@ -345,10 +351,18 @@ export const uploadImage = async (req, res) => {
         res.status(200).json({
             message: "Image uploaded successfully",
             imageUrl: imageUrl,
-            filename: req.file.filename,
-            cloudinary_id: req.file.filename
+            filename: req.file.filename
         });
     } catch (err) {
         res.status(500).json({ message: "Upload failed", error: err.message });
     }
+};
+
+// ✅ Serve static files from uploads directory
+export const serveStaticFiles = (app) => {
+    app.use('/uploads', (req, res, next) => {
+        // Set proper headers for images
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        next();
+    }, express.static('uploads'));
 };
