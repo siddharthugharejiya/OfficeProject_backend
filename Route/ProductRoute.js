@@ -14,13 +14,13 @@ import { upload } from '../Controller/ProductController.js';
 const router = express.Router();
 
 // ✅ Use upload.array('images') for multiple files
-router.post('/add', upload.array('images'), AddProduct);
-router.put('/edite/:id', upload.array('images'), edite_post);
-router.post('/upload', upload.single('image'), uploadImage);
-router.get('/get', getProduct);
-router.get('/get/:id', SingpleProduct);
-router.delete('/del/:id', Del);
-router.get('/edite/:id', edite_get);
-router.get('/category/:category', Product_category);
+router.post('/product/add', upload.array('images'), AddProduct);
+router.put('/product/edite/:id', upload.array('images'), edite_post);
+router.post('/product/upload', upload.single('image'), uploadImage);
+router.get('/product/get', getProduct);
+router.get('/product/:id', SingpleProduct); // ✅ This matches frontend expectation
+router.delete('/product/del/:id', Del);
+router.get('/product/edite/:id', edite_get);
+router.get('/product/category/:category', Product_category);
 
 export default router;

@@ -156,7 +156,10 @@ export const AddProduct = async (req, res) => {
 // === Get All Products ===
 export const getProduct = async (req, res) => {
     try {
+        console.log("📋 Fetching all products...");
         const data = await ProductModel.find().sort({ createdAt: -1 });
+        console.log(`📦 Found ${data.length} products`);
+        
         const updated = data.map(p => ({
             ...p.toObject(),
             Image: mapImageArray(p.Image, req)
@@ -164,6 +167,7 @@ export const getProduct = async (req, res) => {
 
         res.json({ message: "Products fetched", data: updated });
     } catch (err) {
+        console.error("❌ getProduct error:", err);
         res.status(500).json({ message: "Error fetching products", error: err.message });
     }
 };
@@ -171,9 +175,17 @@ export const getProduct = async (req, res) => {
 // === Get Single Product ===
 export const SingpleProduct = async (req, res) => {
     try {
+        console.log("🔍 Fetching product with ID:", req.params.id);
+        
         const product = await ProductModel.findById(req.params.id);
-        if (!product) return res.status(404).json({ message: "Product not found" });
+        console.log("📦 Product found:", product ? "Yes" : "No");
+        
+        if (!product) {
+            console.log("❌ Product not found with ID:", req.params.id);
+            return res.status(404).json({ message: "Product not found" });
+        }
 
+        console.log("✅ Product found, sending response");
         res.status(200).json({
             message: "Fetched",
             data: {
@@ -182,6 +194,7 @@ export const SingpleProduct = async (req, res) => {
             }
         });
     } catch (err) {
+        console.error("❌ SingpleProduct error:", err);
         res.status(500).json({ message: "Something went wrong", error: err.message });
     }
 };
