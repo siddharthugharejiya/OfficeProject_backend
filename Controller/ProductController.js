@@ -1,32 +1,20 @@
 import { ProductModel } from "../model/ProductModel.js";
 import multer from "multer";
-import path from "path";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-import fs from "fs";
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-// ✅ Cloudinary Configuration - Directly here
+// ✅ Cloudinary Configuration
 cloudinary.config({
     cloud_name: 'Root',
     api_key: '449944619464392',
     api_secret: 'vadgdi9q31peMzPoanckAJixhKc'
 });
 
-// ✅ Cloudinary Storage Configuration
+// ✅ Fixed Cloudinary Storage Configuration
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'products',
-        format: async (req, file) => {
-            const ext = path.extname(file.originalname).toLowerCase();
-            if (ext === '.png') return 'png';
-            if (ext === '.jpg' || ext === '.jpeg') return 'jpg';
-            if (ext === '.gif') return 'gif';
-            if (ext === '.webp') return 'webp';
-            return 'jpg';
-        },
         public_id: (req, file) => {
             const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
             return "image-" + uniqueSuffix;
@@ -36,7 +24,9 @@ const storage = new CloudinaryStorage({
 
 export const upload = multer({
     storage: storage,
-
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
     fileFilter: function (req, file, cb) {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
@@ -87,7 +77,7 @@ export const uploadImage = async (req, res) => {
             message: "Image uploaded successfully",
             imageUrl: imageUrl,
             filename: req.file.filename,
-            cloudinary_id: req.file.filename // Cloudinary public_id
+            cloudinary_id: req.file.filename
         });
     } catch (err) {
         res.status(500).json({ message: "Upload failed", error: err.message });
@@ -97,43 +87,72 @@ export const uploadImage = async (req, res) => {
 // === Add Product ===
 export const AddProduct = async (req, res) => {
     try {
+        console.log("📥 Add Product Request Received");
+        console.log("Request Body:", req.body);
+        console.log("Uploaded Files:", req.files);
+        console.log("LinkImages:", req.body.linkImages);
+
         const { name, title, des, rating, price, weight, tag, category, linkImages } = req.body;
+
+        // ✅ Validation
+        if (!name || !name.trim()) {
+            return res.status(400).json({ message: "Product name is required" });
+        }
 
         let imageArray = [];
 
-        // Handle uploaded files (Cloudinary)
+        // ✅ Handle uploaded files (Cloudinary)
         if (req.files && req.files.length > 0) {
+            console.log(`📸 Found ${req.files.length} uploaded files`);
             const uploadedFiles = req.files.map(file => file.path); // Cloudinary URLs
             imageArray = [...imageArray, ...uploadedFiles];
+            console.log("Uploaded file URLs:", uploadedFiles);
         }
 
-        // Handle link images (from frontend)
-        if (linkImages) {
+        // ✅ Handle link images (from frontend)
+        if (linkImages && linkImages.trim()) {
             try {
+                console.log("Processing linkImages:", linkImages);
                 const linkImagesArray = JSON.parse(linkImages);
-                if (Array.isArray(linkImagesArray)) {
-                    imageArray = [...imageArray, ...linkImagesArray];
+                if (Array.isArray(linkImagesArray) && linkImagesArray.length > 0) {
+                    console.log(`🔗 Found ${linkImagesArray.length} link images`);
+                    // Validate URLs
+                    const validLinks = linkImagesArray.filter(link =>
+                        link && typeof link === 'string' && link.startsWith('http')
+                    );
+                    imageArray = [...imageArray, ...validLinks];
+                    console.log("Valid link URLs:", validLinks);
                 }
             } catch (e) {
-                console.log("Error parsing linkImages:", e.message);
+                console.log("❌ Error parsing linkImages:", e.message);
+                return res.status(400).json({ message: "Invalid linkImages format" });
             }
         }
+
+        console.log("Final imageArray:", imageArray);
 
         if (imageArray.length === 0) {
             return res.status(400).json({ message: "At least one image is required" });
         }
 
-        const product = await ProductModel.create({
-            name,
+        // ✅ Create product
+        const productData = {
+            name: name.trim(),
             Image: imageArray,
-            title,
-            des,
-            rating,
-            price,
-            weight,
-            tag,
-            category
-        });
+            title: title || "",
+            des: des || "",
+            rating: rating || "",
+            price: price || "",
+            weight: weight || "",
+            tag: tag || "",
+            category: category || ""
+        };
+
+        console.log("Creating product with data:", productData);
+
+        const product = await ProductModel.create(productData);
+
+        console.log("✅ Product created successfully");
 
         res.status(201).json({
             message: "Product added successfully",
@@ -143,8 +162,12 @@ export const AddProduct = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error("AddProduct error:", err);
-        res.status(500).json({ message: "Failed to add product", error: err.message });
+        console.error("❌ AddProduct error:", err);
+        res.status(500).json({
+            message: "Failed to add product",
+            error: err.message,
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        });
     }
 };
 
@@ -261,53 +284,92 @@ export const edite_get = async (req, res) => {
 // === Edit POST with Cloudinary ===
 export const edite_post = async (req, res) => {
     try {
+        console.log("📥 Edit Product Request Received");
+        console.log("Request Body:", req.body);
+        console.log("Uploaded Files:", req.files);
+        console.log("LinkImages:", req.body.linkImages);
+
         const { name, title, des, rating, price, weight, tag, category, linkImages } = req.body;
         const { id } = req.params;
 
         // Get existing product to manage old images
         const existingProduct = await ProductModel.findById(id);
-        let imageArray = existingProduct ? [...existingProduct.Image] : [];
-
-        // Handle uploaded files (Cloudinary)
-        if (req.files && req.files.length > 0) {
-            const uploadedFiles = req.files.map(file => file.path); // Cloudinary URLs
-            imageArray = [...uploadedFiles]; // Replace with new images
+        if (!existingProduct) {
+            return res.status(404).json({ message: "Product not found" });
         }
 
-        // Handle link images (from frontend)
-        if (linkImages) {
+        let imageArray = [];
+
+        // ✅ Handle uploaded files (Cloudinary)
+        if (req.files && req.files.length > 0) {
+            console.log(`📸 Found ${req.files.length} uploaded files for edit`);
+            const uploadedFiles = req.files.map(file => file.path); // Cloudinary URLs
+            imageArray = [...uploadedFiles];
+            console.log("New uploaded file URLs:", uploadedFiles);
+        }
+
+        // ✅ Handle link images (from frontend)
+        if (linkImages && linkImages.trim()) {
             try {
+                console.log("Processing linkImages for edit:", linkImages);
                 const linkImagesArray = JSON.parse(linkImages);
-                if (Array.isArray(linkImagesArray)) {
-                    imageArray = [...imageArray, ...linkImagesArray];
+                if (Array.isArray(linkImagesArray) && linkImagesArray.length > 0) {
+                    console.log(`🔗 Found ${linkImagesArray.length} link images for edit`);
+                    // Validate URLs
+                    const validLinks = linkImagesArray.filter(link =>
+                        link && typeof link === 'string' && link.startsWith('http')
+                    );
+                    imageArray = [...imageArray, ...validLinks];
+                    console.log("Valid link URLs for edit:", validLinks);
                 }
             } catch (e) {
-                console.log("Error parsing linkImages:", e.message);
+                console.log("❌ Error parsing linkImages in edit:", e.message);
+                return res.status(400).json({ message: "Invalid linkImages format" });
             }
         }
 
-        const updated = await ProductModel.findByIdAndUpdate(id, {
-            name,
+        console.log("Final imageArray for edit:", imageArray);
+
+        if (imageArray.length === 0) {
+            return res.status(400).json({ message: "At least one image is required" });
+        }
+
+        const updatedData = {
+            name: name ? name.trim() : existingProduct.name,
             Image: imageArray,
-            title,
-            des,
-            rating,
-            price,
-            weight,
-            tag,
-            category
-        }, { new: true });
+            title: title || existingProduct.title,
+            des: des || existingProduct.des,
+            rating: rating || existingProduct.rating,
+            price: price || existingProduct.price,
+            weight: weight || existingProduct.weight,
+            tag: tag || existingProduct.tag,
+            category: category || existingProduct.category
+        };
+
+        console.log("Updating product with data:", updatedData);
+
+        const updated = await ProductModel.findByIdAndUpdate(
+            id,
+            updatedData,
+            { new: true }
+        );
+
+        console.log("✅ Product updated successfully");
 
         res.status(200).json({
-            message: "Updated",
+            message: "Product updated successfully",
             data: {
                 ...updated.toObject(),
                 Image: mapImageArray(updated.Image, req)
             }
         });
     } catch (err) {
-        console.error("Edit product error:", err);
-        res.status(500).json({ message: "Update failed", error: err.message });
+        console.error("❌ Edit product error:", err);
+        res.status(500).json({
+            message: "Update failed",
+            error: err.message,
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        });
     }
 };
 
