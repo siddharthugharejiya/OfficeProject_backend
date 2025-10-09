@@ -33,20 +33,48 @@ app.use("/", ProductRoutes);
 
 // Error handling middleware
 app.use((error, req, res, next) => {
+    console.error('🚨 Error occurred:', error);
+
     if (error instanceof multer.MulterError) {
+        console.error('📁 Multer Error:', error.code, error.message);
+
         if (error.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ message: 'File too large. Maximum size is 10MB.' });
+            return res.status(400).json({
+                message: 'File too large. Maximum size is 10MB.',
+                code: 'LIMIT_FILE_SIZE'
+            });
         }
         if (error.code === 'LIMIT_FILE_COUNT') {
-            return res.status(400).json({ message: 'Too many files. Maximum is 10 files.' });
+            return res.status(400).json({
+                message: 'Too many files. Maximum is 10 files.',
+                code: 'LIMIT_FILE_COUNT'
+            });
         }
         if (error.code === 'LIMIT_UNEXPECTED_FILE') {
-            return res.status(400).json({ message: 'Unexpected field name for file upload.' });
+            return res.status(400).json({
+                message: 'Unexpected field name for file upload. Use "images" field.',
+                code: 'LIMIT_UNEXPECTED_FILE'
+            });
         }
+        if (error.code === 'LIMIT_PART_COUNT') {
+            return res.status(400).json({
+                message: 'Too many parts in the request.',
+                code: 'LIMIT_PART_COUNT'
+            });
+        }
+
+        return res.status(400).json({
+            message: 'File upload error: ' + error.message,
+            code: error.code
+        });
     }
 
-    console.error('Error:', error);
-    res.status(500).json({ message: 'Internal server error', error: error.message });
+    // Handle other errors
+    res.status(500).json({
+        message: 'Internal server error',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
 });
 
 app.listen(9595, () => {

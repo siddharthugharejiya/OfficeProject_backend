@@ -3,7 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// ✅ Simple multer disk storage
+// ✅ Enhanced multer disk storage configuration
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = 'uploads/';
@@ -23,9 +23,11 @@ const storage = multer.diskStorage({
 export const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB limit
+        fileSize: 10 * 1024 * 1024, // 10MB limit (increased)
+        files: 10 // Maximum 10 files
     },
     fileFilter: function (req, file, cb) {
+        // Check file type
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
         } else {
@@ -63,6 +65,20 @@ const mapImageArray = (images, req) => {
 export const AddProduct = async (req, res) => {
     try {
         console.log("📥 Add Product Request Received");
+        console.log("📋 Request body:", req.body);
+        console.log("📁 Files received:", req.files ? req.files.length : 0);
+
+        if (req.files) {
+            req.files.forEach((file, index) => {
+                console.log(`📸 File ${index + 1}:`, {
+                    originalname: file.originalname,
+                    filename: file.filename,
+                    path: file.path,
+                    size: file.size,
+                    mimetype: file.mimetype
+                });
+            });
+        }
 
         const { name, title, des, rating, price, weight, tag, category, linkImages } = req.body;
 
@@ -75,9 +91,10 @@ export const AddProduct = async (req, res) => {
 
         // ✅ Handle uploaded files (local storage)
         if (req.files && req.files.length > 0) {
-            console.log(`📸 Found ${req.files.length} uploaded files`);
+            console.log(`📸 Processing ${req.files.length} uploaded files`);
             const uploadedFiles = req.files.map(file => file.path);
             imageArray = [...imageArray, ...uploadedFiles];
+            console.log("📸 Uploaded file paths:", uploadedFiles);
         }
 
         // ✅ Handle link images (from frontend)
@@ -90,6 +107,7 @@ export const AddProduct = async (req, res) => {
                         link && typeof link === 'string' && link.startsWith('http')
                     );
                     imageArray = [...imageArray, ...validLinks];
+                    console.log("🔗 Added link images:", validLinks);
                 }
             } catch (e) {
                 console.log("❌ Error parsing linkImages:", e.message);
@@ -100,6 +118,8 @@ export const AddProduct = async (req, res) => {
         if (imageArray.length === 0) {
             return res.status(400).json({ message: "At least one image is required" });
         }
+
+        console.log("📸 Final image array:", imageArray);
 
         // ✅ Create product
         const productData = {
@@ -114,6 +134,7 @@ export const AddProduct = async (req, res) => {
             category: category || ""
         };
 
+        console.log("💾 Creating product with data:", productData);
         const product = await ProductModel.create(productData);
 
         res.status(201).json({
