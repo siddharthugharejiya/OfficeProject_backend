@@ -4,26 +4,34 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import fs from "fs";
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-// ✅ Get current directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// ✅ Cloudinary Configuration - Directly here
+cloudinary.config({
+    cloud_name: 'Root',
+    api_key: '449944619464392',
+    api_secret: 'vadgdi9q31peMzPoanckAJixhKc'
+});
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "../uploads/");
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// === Configure Multer ===
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadsDir);
+// ✅ Cloudinary Storage Configuration
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'products',
+        format: async (req, file) => {
+            const ext = path.extname(file.originalname).toLowerCase();
+            if (ext === '.png') return 'png';
+            if (ext === '.jpg' || ext === '.jpeg') return 'jpg';
+            if (ext === '.gif') return 'gif';
+            if (ext === '.webp') return 'webp';
+            return 'jpg';
+        },
+        public_id: (req, file) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            return "image-" + uniqueSuffix;
+        },
     },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, "image-" + uniqueSuffix + path.extname(file.originalname));
-    }
 });
 
 export const upload = multer({
@@ -41,29 +49,24 @@ export const upload = multer({
     }
 });
 
-// === Helper: generate dynamic URL with HTTPS ===
+// === Helper: generate dynamic URL ===
 const getFullImageUrl = (img, req) => {
     if (!img) return null;
 
     // ✅ Base64 images
     if (img.startsWith("data:image/")) return img;
 
-    // ✅ Already a full URL - FORCE HTTPS
+    // ✅ Already a full URL (Cloudinary or other)
     if (img.startsWith("http")) {
-        return img.replace('http://', 'https://');
+        return img;
     }
 
-    // ✅ Local uploads - Use absolute HTTPS URL
-    let cleanPath = img;
-    if (cleanPath.startsWith('uploads/')) {
-        cleanPath = cleanPath.replace('uploads/', '');
-    }
-    if (cleanPath.startsWith('/')) {
-        cleanPath = cleanPath.slice(1);
+    // ✅ For backward compatibility with local uploads
+    if (img.startsWith('uploads/')) {
+        return `https://officeproject-backend.onrender.com/${img}`;
     }
 
-    // ✅ Always use HTTPS for production
-    return `https://officeproject-backend.onrender.com/uploads/${cleanPath}`;
+    return img;
 };
 
 // Map array of images
@@ -81,12 +84,13 @@ export const uploadImage = async (req, res) => {
             return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const imageUrl = `uploads/${req.file.filename}`;
+        const imageUrl = req.file.path; // Cloudinary URL
 
         res.status(200).json({
             message: "Image uploaded successfully",
             imageUrl: imageUrl,
-            filename: req.file.filename
+            filename: req.file.filename,
+            cloudinary_id: req.file.filename // Cloudinary public_id
         });
     } catch (err) {
         res.status(500).json({ message: "Upload failed", error: err.message });
@@ -100,9 +104,9 @@ export const AddProduct = async (req, res) => {
 
         let imageArray = [];
 
-        // Handle uploaded files
+        // Handle uploaded files (Cloudinary)
         if (req.files && req.files.length > 0) {
-            const uploadedFiles = req.files.map(file => `uploads/${file.filename}`);
+            const uploadedFiles = req.files.map(file => file.path); // Cloudinary URLs
             imageArray = [...imageArray, ...uploadedFiles];
         }
 
@@ -202,12 +206,39 @@ export const Product_get = async (req, res) => {
     }
 };
 
-// === Delete Product ===
+// === Delete Product with Cloudinary cleanup ===
 export const Del = async (req, res) => {
     try {
-        const product = await ProductModel.findByIdAndDelete(req.params.id);
-        res.json({ message: "Deleted", data: product });
+        const product = await ProductModel.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        // Delete images from Cloudinary
+        if (product.Image && product.Image.length > 0) {
+            for (const imageUrl of product.Image) {
+                if (imageUrl.includes('cloudinary.com')) {
+                    // Extract public_id from Cloudinary URL
+                    const urlParts = imageUrl.split('/');
+                    const publicIdWithExtension = urlParts[urlParts.length - 1];
+                    const publicId = 'products/' + publicIdWithExtension.split('.')[0];
+
+                    try {
+                        await cloudinary.uploader.destroy(publicId);
+                    } catch (cloudinaryError) {
+                        console.log('Error deleting from Cloudinary:', cloudinaryError);
+                    }
+                }
+            }
+        }
+
+        // Delete product from database
+        await ProductModel.findByIdAndDelete(req.params.id);
+
+        res.json({ message: "Product deleted successfully", data: product });
     } catch (err) {
+        console.error("Delete error:", err);
         res.status(500).json({ message: "Failed to delete", error: err.message });
     }
 };
@@ -230,18 +261,20 @@ export const edite_get = async (req, res) => {
     }
 };
 
-// === Edit POST ===
+// === Edit POST with Cloudinary ===
 export const edite_post = async (req, res) => {
     try {
         const { name, title, des, rating, price, weight, tag, category, linkImages } = req.body;
         const { id } = req.params;
 
-        let imageArray = [];
+        // Get existing product to manage old images
+        const existingProduct = await ProductModel.findById(id);
+        let imageArray = existingProduct ? [...existingProduct.Image] : [];
 
-        // Handle uploaded files
+        // Handle uploaded files (Cloudinary)
         if (req.files && req.files.length > 0) {
-            const uploadedFiles = req.files.map(file => `uploads/${file.filename}`);
-            imageArray = [...imageArray, ...uploadedFiles];
+            const uploadedFiles = req.files.map(file => file.path); // Cloudinary URLs
+            imageArray = [...uploadedFiles]; // Replace with new images
         }
 
         // Handle link images (from frontend)
