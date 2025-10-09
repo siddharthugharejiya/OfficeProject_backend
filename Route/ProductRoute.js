@@ -8,8 +8,8 @@ import {
     edite_post,
     Product_category,
     uploadImage
-} from '../controllers/ProductController.js';
-import { upload } from '../controllers/ProductController.js';
+} from '../Controller/ProductController.js';
+import { upload } from '../Controller/ProductController.js';
 
 const router = express.Router();
 
