@@ -159,7 +159,7 @@ export const getProduct = async (req, res) => {
         console.log("📋 Fetching all products...");
         const data = await ProductModel.find().sort({ createdAt: -1 });
         console.log(`📦 Found ${data.length} products`);
-        
+
         const updated = data.map(p => ({
             ...p.toObject(),
             Image: mapImageArray(p.Image, req)
@@ -176,10 +176,10 @@ export const getProduct = async (req, res) => {
 export const SingpleProduct = async (req, res) => {
     try {
         console.log("🔍 Fetching product with ID:", req.params.id);
-        
+
         const product = await ProductModel.findById(req.params.id);
         console.log("📦 Product found:", product ? "Yes" : "No");
-        
+
         if (!product) {
             console.log("❌ Product not found with ID:", req.params.id);
             return res.status(404).json({ message: "Product not found" });
