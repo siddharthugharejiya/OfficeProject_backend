@@ -78,7 +78,8 @@ app.use((error, req, res, next) => {
     });
 });
 
-app.listen(process.env.PORT, () => {
-    console.log("Server is running on port 9595");
+const PORT = process.env.PORT || 9595;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
     Server();
 });

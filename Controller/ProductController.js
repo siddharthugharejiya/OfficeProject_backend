@@ -2,6 +2,7 @@ import { ProductModel } from "../model/ProductModel.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import express from "express";
 import cloudinary from "../config/cloudinary.js";
 
 // ✅ Enhanced multer disk storage configuration (temporary local before Cloudinary upload)
