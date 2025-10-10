@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import express from "express";
 import cloudinary from "../config/cloudinary.js";
+// import cloudinary from "../config/cloudinary.js";
 
 // ✅ Enhanced multer disk storage configuration (temporary local before Cloudinary upload)
 const storage = multer.diskStorage({
