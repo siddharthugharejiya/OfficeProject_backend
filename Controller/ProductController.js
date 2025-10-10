@@ -2,8 +2,9 @@ import { ProductModel } from "../model/ProductModel.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import cloudinary from "../config/cloudinary.js";
 
-// ✅ Enhanced multer disk storage configuration
+// ✅ Enhanced multer disk storage configuration (temporary local before Cloudinary upload)
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = 'uploads/';
@@ -45,7 +46,7 @@ const getFullImageUrl = (img, req) => {
         return img;
     }
 
-    // ✅ For local uploads
+    // ✅ For local uploads (legacy)
     if (img.startsWith('uploads/')) {
         return `${req.protocol}://${req.get('host')}/${img}`;
     }
@@ -89,7 +90,7 @@ export const AddProduct = async (req, res) => {
 
         let imageArray = [];
 
-        // ✅ Handle uploaded files (local storage)
+        // ✅ Handle uploaded files: upload to Cloudinary, then delete temp file
         if (req.files && req.files.length > 0) {
             const uploadedFiles = [];
             for (const file of req.files) {
@@ -97,11 +98,10 @@ export const AddProduct = async (req, res) => {
                     folder: 'prettyware_products'
                 });
                 uploadedFiles.push(result.secure_url);
-                fs.unlinkSync(file.path); // delete temp file
+                try { fs.unlinkSync(file.path); } catch { }
             }
             imageArray = [...imageArray, ...uploadedFiles];
         }
-
 
         // ✅ Handle link images (from frontend)
         if (linkImages && linkImages.trim()) {
@@ -124,7 +124,6 @@ export const AddProduct = async (req, res) => {
         if (imageArray.length === 0) {
             return res.status(400).json({ message: "At least one image is required" });
         }
-
 
         console.log("📸 Final image array:", imageArray);
 
@@ -237,10 +236,9 @@ export const Del = async (req, res) => {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        // Delete local image files
+        // Delete local image files (legacy)
         if (product.Image && product.Image.length > 0) {
             for (const imageUrl of product.Image) {
-                // Only delete local files, not URL links
                 if (imageUrl.startsWith('uploads/')) {
                     const filePath = imageUrl;
                     if (fs.existsSync(filePath)) {
@@ -250,7 +248,6 @@ export const Del = async (req, res) => {
             }
         }
 
-        // Delete product from database
         await ProductModel.findByIdAndDelete(req.params.id);
 
         res.json({ message: "Product deleted successfully", data: product });
@@ -284,7 +281,6 @@ export const edite_post = async (req, res) => {
         const { name, title, des, rating, price, weight, tag, category, linkImages } = req.body;
         const { id } = req.params;
 
-        // Get existing product to manage old images
         const existingProduct = await ProductModel.findById(id);
         if (!existingProduct) {
             return res.status(404).json({ message: "Product not found" });
@@ -292,25 +288,22 @@ export const edite_post = async (req, res) => {
 
         let imageArray = [];
 
-        // ✅ Handle uploaded files (local storage)
+        // ✅ If new files uploaded, upload to Cloudinary and replace old images
         if (req.files && req.files.length > 0) {
-            const uploadedFiles = req.files.map(file => file.path);
-            imageArray = [...uploadedFiles];
-
-            // Delete old local images
-            if (existingProduct.Image && existingProduct.Image.length > 0) {
-                for (const oldImage of existingProduct.Image) {
-                    if (oldImage.startsWith('uploads/') && fs.existsSync(oldImage)) {
-                        fs.unlinkSync(oldImage);
-                    }
-                }
+            const uploadedFiles = [];
+            for (const file of req.files) {
+                const result = await cloudinary.uploader.upload(file.path, {
+                    folder: 'prettyware_products'
+                });
+                uploadedFiles.push(result.secure_url);
+                try { fs.unlinkSync(file.path); } catch { }
             }
+            imageArray = [...uploadedFiles];
         } else {
-            // Keep existing images if no new files uploaded
             imageArray = [...existingProduct.Image];
         }
 
-        // ✅ Handle link images (from frontend)
+        // ✅ Handle link images (append)
         if (linkImages && linkImages.trim()) {
             try {
                 const linkImagesArray = JSON.parse(linkImages);
@@ -318,7 +311,6 @@ export const edite_post = async (req, res) => {
                     const validLinks = linkImagesArray.filter(link =>
                         link && typeof link === 'string' && link.startsWith('http')
                     );
-                    // Add link images to existing array
                     imageArray = [...imageArray, ...validLinks];
                 }
             } catch (e) {
@@ -387,22 +379,24 @@ export const uploadImage = async (req, res) => {
             return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const imageUrl = req.file.path;
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'prettyware_products'
+        });
+        try { fs.unlinkSync(req.file.path); } catch { }
 
         res.status(200).json({
             message: "Image uploaded successfully",
-            imageUrl: imageUrl,
-            filename: req.file.filename
+            imageUrl: result.secure_url,
+            publicId: result.public_id
         });
     } catch (err) {
         res.status(500).json({ message: "Upload failed", error: err.message });
     }
 };
 
-// ✅ Serve static files from uploads directory
+// ✅ Serve static files from uploads directory (legacy local images)
 export const serveStaticFiles = (app) => {
     app.use('/uploads', (req, res, next) => {
-        // Set proper headers for images
         res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
         next();
     }, express.static('uploads'));
