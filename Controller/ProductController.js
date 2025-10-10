@@ -91,11 +91,17 @@ export const AddProduct = async (req, res) => {
 
         // ✅ Handle uploaded files (local storage)
         if (req.files && req.files.length > 0) {
-            console.log(`📸 Processing ${req.files.length} uploaded files`);
-            const uploadedFiles = req.files.map(file => file.path);
+            const uploadedFiles = [];
+            for (const file of req.files) {
+                const result = await cloudinary.uploader.upload(file.path, {
+                    folder: 'prettyware_products'
+                });
+                uploadedFiles.push(result.secure_url);
+                fs.unlinkSync(file.path); // delete temp file
+            }
             imageArray = [...imageArray, ...uploadedFiles];
-            console.log("📸 Uploaded file paths:", uploadedFiles);
         }
+
 
         // ✅ Handle link images (from frontend)
         if (linkImages && linkImages.trim()) {

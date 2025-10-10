@@ -7,6 +7,7 @@ import { Server } from './config/Server.js';
 import fs from 'fs';
 import { log } from 'console';
 import multer from 'multer';
+import 'dotenv/config'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,7 +78,7 @@ app.use((error, req, res, next) => {
     });
 });
 
-app.listen(9595, () => {
+app.listen(process.env.PORT, () => {
     console.log("Server is running on port 9595");
     Server();
 });
