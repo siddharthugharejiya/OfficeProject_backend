@@ -7,7 +7,8 @@ import {
     edite_get,
     edite_post,
     Product_category,
-    uploadImage
+    uploadImage,
+    Product_get
 } from '../Controller/ProductController.js';
 import { upload } from '../Controller/ProductController.js';
 
@@ -21,6 +22,7 @@ router.get('/get', getProduct);
 router.get('/get/:id', SingpleProduct);
 router.delete('/del/:id', Del);
 router.get('/edite/:id', edite_get);
-router.get('/category/:category', Product_category);
+router.get('/products/:id', Product_get);
+router.get('/category/:category', Product_category)
 
 export default router;
