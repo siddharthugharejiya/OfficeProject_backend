@@ -22,7 +22,7 @@ router.get('/get', getProduct);
 router.get('/get/:id', SingpleProduct);
 router.delete('/del/:id', Del);
 router.get('/edite/:id', edite_get);
-router.get('/products/:id', Product_get);
+router.get('/product/:id', Product_get);
 router.get('/category/:category', Product_category)
 
 export default router;
