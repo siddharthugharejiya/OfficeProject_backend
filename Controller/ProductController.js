@@ -92,9 +92,10 @@ export const AddProduct = async (req, res) => {
         // ✅ Handle uploaded files (local storage)
         if (req.files && req.files.length > 0) {
             console.log(`📸 Processing ${req.files.length} uploaded files`);
-            const uploadedFiles = req.files.map(file => file.path);
-            imageArray = [...imageArray, ...uploadedFiles];
-            console.log("📸 Uploaded file paths:", uploadedFiles);
+            imageArray = req.files.map(file => ({
+                url: `${req.protocol}://${req.get('host')}/uploads/${file.filename}`
+            }));
+            console.log("📸 Uploaded file paths:", imageArray);
         }
 
         // ✅ Handle link images (from frontend)
@@ -106,8 +107,9 @@ export const AddProduct = async (req, res) => {
                     const validLinks = linkImagesArray.filter(link =>
                         link && typeof link === 'string' && link.startsWith('http')
                     );
-                    imageArray = [...imageArray, ...validLinks];
-                    console.log("🔗 Added link images:", validLinks);
+                    const validLinkObjects = validLinks.map(link => ({ url: link }));
+                    imageArray = [...imageArray, ...validLinkObjects];
+                    console.log("🔗 Added link images:", validLinkObjects);
                 }
             } catch (e) {
                 console.log("❌ Error parsing linkImages:", e.message);
@@ -152,6 +154,7 @@ export const AddProduct = async (req, res) => {
         });
     }
 };
+
 
 // === Get All Products ===
 export const getProduct = async (req, res) => {
