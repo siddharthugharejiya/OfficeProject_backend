@@ -64,7 +64,7 @@ const mapImageArray = (images, req) => {
     return [];
 };
 
-// === Add Product ===
+
 export const AddProduct = async (req, res) => {
     try {
         console.log("📥 Add Product Request Received");
@@ -83,7 +83,7 @@ export const AddProduct = async (req, res) => {
             });
         }
 
-        const { name, title, des, rating, price, weight, tag, category, linkImages } = req.body;
+        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap } = req.body;
 
         // ✅ Validation
         if (!name || !name.trim()) {
@@ -129,7 +129,7 @@ export const AddProduct = async (req, res) => {
 
         console.log("📸 Final image array:", imageArray);
 
-        // ✅ Create product
+        // ✅ Create product - INCLUDING ALL FIELDS
         const productData = {
             name: name.trim(),
             Image: imageArray,
@@ -139,7 +139,12 @@ export const AddProduct = async (req, res) => {
             price: price || "",
             weight: weight || "",
             tag: tag || "",
-            category: category || ""
+            category: category || "",
+            h: h || "",
+            w: w || "",
+            l: l || "",
+            s_trap: s_trap || "",
+            p_trap: p_trap || ""
         };
 
         console.log("💾 Creating product with data:", productData);
