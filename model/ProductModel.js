@@ -11,7 +11,13 @@ const productSchema = mongoose.Schema({
     price: String,
     weight: String,
     tag: String,
-    category: String
+    category: String,
+    l: String,
+    h: String,
+    w: String,
+    s_trap: String,
+    p_trap: String,
+
 })
 export const ProductModel = mongoose.model("product", productSchema)
 
