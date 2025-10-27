@@ -4,7 +4,6 @@ import path from "path";
 import fs from "fs";
 import express from "express";
 import cloudinary from "../config/cloudinary.js";
-// import cloudinary from "../config/cloudinary.js";
 
 // ✅ Enhanced multer disk storage configuration (temporary local before Cloudinary upload)
 const storage = multer.diskStorage({
@@ -64,7 +63,6 @@ const mapImageArray = (images, req) => {
     return [];
 };
 
-
 export const AddProduct = async (req, res) => {
     try {
         console.log("📥 Add Product Request Received");
@@ -83,7 +81,7 @@ export const AddProduct = async (req, res) => {
             });
         }
 
-        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap } = req.body;
+        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap, size } = req.body;
 
         // ✅ Validation
         if (!name || !name.trim()) {
@@ -148,7 +146,6 @@ export const AddProduct = async (req, res) => {
             p_trap: p_trap || ""
         };
 
-        // console.log("💾 Creating product with data:", productData);
         const product = await ProductModel.create(productData);
 
         res.status(201).json({
@@ -311,6 +308,10 @@ export const edite_post = async (req, res) => {
 
         const { id } = req.params;
 
+        if (!id) {
+            return res.status(400).json({ message: "Product ID is required" });
+        }
+
         // ✅ Find existing product
         const existingProduct = await ProductModel.findById(id);
         if (!existingProduct) {
@@ -324,16 +325,25 @@ export const edite_post = async (req, res) => {
             console.log("📸 Uploading new files to Cloudinary...");
             const uploadedFiles = [];
             for (const file of req.files) {
-                const result = await cloudinary.uploader.upload(file.path, {
-                    folder: 'prettyware_products'
-                });
-                uploadedFiles.push(result.secure_url);
-                // Delete temporary file
                 try {
-                    fs.unlinkSync(file.path);
-                    console.log(`🗑️ Deleted temp file: ${file.path}`);
-                } catch (error) {
-                    console.log("⚠️ Could not delete temp file:", file.path);
+                    const result = await cloudinary.uploader.upload(file.path, {
+                        folder: 'prettyware_products'
+                    });
+                    uploadedFiles.push(result.secure_url);
+
+                    // Delete temporary file
+                    try {
+                        fs.unlinkSync(file.path);
+                        console.log(`🗑️ Deleted temp file: ${file.path}`);
+                    } catch (error) {
+                        console.log("⚠️ Could not delete temp file:", file.path);
+                    }
+                } catch (uploadError) {
+                    console.error("❌ Cloudinary upload error:", uploadError);
+                    return res.status(500).json({
+                        message: "Failed to upload image to cloud",
+                        error: uploadError.message
+                    });
                 }
             }
             imageArray = [...uploadedFiles];
@@ -344,7 +354,7 @@ export const edite_post = async (req, res) => {
             console.log("🔄 Using existing images");
         }
 
-        // ✅ Handle link images (append or replace based on your requirement)
+        // ✅ Handle link images
         if (linkImages && linkImages.trim()) {
             try {
                 const linkImagesArray = JSON.parse(linkImages);
@@ -352,13 +362,7 @@ export const edite_post = async (req, res) => {
                     const validLinks = linkImagesArray.filter(link =>
                         link && typeof link === 'string' && link.startsWith('http')
                     );
-                    // If new files were uploaded, replace with new files + links
-                    // If no new files, append links to existing images
-                    if (req.files && req.files.length > 0) {
-                        imageArray = [...imageArray, ...validLinks];
-                    } else {
-                        imageArray = [...existingProduct.Image, ...validLinks];
-                    }
+                    imageArray = [...imageArray, ...validLinks];
                     console.log("🔗 Added link images:", validLinks);
                 }
             } catch (e) {
@@ -376,7 +380,7 @@ export const edite_post = async (req, res) => {
 
         // ✅ Prepare updated data with ALL fields
         const updatedData = {
-            name: name ? name.trim() : existingProduct.name,
+            name: name !== undefined && name !== null ? name.trim() : existingProduct.name,
             Image: imageArray,
             title: title !== undefined ? title : existingProduct.title,
             des: des !== undefined ? des : existingProduct.des,
@@ -402,6 +406,10 @@ export const edite_post = async (req, res) => {
             { new: true, runValidators: true }
         );
 
+        if (!updatedProduct) {
+            return res.status(500).json({ message: "Failed to update product" });
+        }
+
         // ✅ Map image URLs for response
         const responseData = {
             ...updatedProduct.toObject(),
@@ -423,7 +431,6 @@ export const edite_post = async (req, res) => {
         });
     }
 };
-
 
 // === Get Products by Category ===
 export const Product_category = async (req, res) => {
