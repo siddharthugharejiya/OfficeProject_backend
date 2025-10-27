@@ -141,13 +141,14 @@ export const AddProduct = async (req, res) => {
             tag: tag || "",
             category: category || "",
             h: h || "",
+            size: size || "",
             w: w || "",
             l: l || "",
             s_trap: s_trap || "",
             p_trap: p_trap || ""
         };
 
-        console.log("💾 Creating product with data:", productData);
+        // console.log("💾 Creating product with data:", productData);
         const product = await ProductModel.create(productData);
 
         res.status(201).json({
@@ -285,9 +286,32 @@ export const edite_get = async (req, res) => {
 // === Edit POST ===
 export const edite_post = async (req, res) => {
     try {
-        const { name, title, des, rating, price, weight, tag, category, linkImages } = req.body;
+        console.log("📥 Edit Product Request Received");
+        console.log("📋 Request body:", req.body);
+        console.log("📁 Files received:", req.files ? req.files.length : 0);
+        console.log("🆔 Product ID:", req.params.id);
+
+        const {
+            name,
+            title,
+            des,
+            rating,
+            price,
+            weight,
+            tag,
+            category,
+            linkImages,
+            h,
+            w,
+            l,
+            s_trap,
+            p_trap,
+            size
+        } = req.body;
+
         const { id } = req.params;
 
+        // ✅ Find existing product
         const existingProduct = await ProductModel.findById(id);
         if (!existingProduct) {
             return res.status(404).json({ message: "Product not found" });
@@ -295,22 +319,32 @@ export const edite_post = async (req, res) => {
 
         let imageArray = [];
 
-        // ✅ If new files uploaded, upload to Cloudinary and replace old images
+        // ✅ Handle new uploaded files: upload to Cloudinary
         if (req.files && req.files.length > 0) {
+            console.log("📸 Uploading new files to Cloudinary...");
             const uploadedFiles = [];
             for (const file of req.files) {
                 const result = await cloudinary.uploader.upload(file.path, {
                     folder: 'prettyware_products'
                 });
                 uploadedFiles.push(result.secure_url);
-                try { fs.unlinkSync(file.path); } catch { }
+                // Delete temporary file
+                try {
+                    fs.unlinkSync(file.path);
+                    console.log(`🗑️ Deleted temp file: ${file.path}`);
+                } catch (error) {
+                    console.log("⚠️ Could not delete temp file:", file.path);
+                }
             }
             imageArray = [...uploadedFiles];
+            console.log("✅ New files uploaded to Cloudinary:", uploadedFiles);
         } else {
+            // ✅ Keep existing images if no new files uploaded
             imageArray = [...existingProduct.Image];
+            console.log("🔄 Using existing images");
         }
 
-        // ✅ Handle link images (append)
+        // ✅ Handle link images (append or replace based on your requirement)
         if (linkImages && linkImages.trim()) {
             try {
                 const linkImagesArray = JSON.parse(linkImages);
@@ -318,7 +352,14 @@ export const edite_post = async (req, res) => {
                     const validLinks = linkImagesArray.filter(link =>
                         link && typeof link === 'string' && link.startsWith('http')
                     );
-                    imageArray = [...imageArray, ...validLinks];
+                    // If new files were uploaded, replace with new files + links
+                    // If no new files, append links to existing images
+                    if (req.files && req.files.length > 0) {
+                        imageArray = [...imageArray, ...validLinks];
+                    } else {
+                        imageArray = [...existingProduct.Image, ...validLinks];
+                    }
+                    console.log("🔗 Added link images:", validLinks);
                 }
             } catch (e) {
                 console.log("❌ Error parsing linkImages in edit:", e.message);
@@ -326,43 +367,63 @@ export const edite_post = async (req, res) => {
             }
         }
 
+        // ✅ Ensure at least one image exists
         if (imageArray.length === 0) {
             return res.status(400).json({ message: "At least one image is required" });
         }
 
+        console.log("📸 Final image array for update:", imageArray);
+
+        // ✅ Prepare updated data with ALL fields
         const updatedData = {
             name: name ? name.trim() : existingProduct.name,
             Image: imageArray,
-            title: title || existingProduct.title,
-            des: des || existingProduct.des,
-            rating: rating || existingProduct.rating,
-            price: price || existingProduct.price,
-            weight: weight || existingProduct.weight,
-            tag: tag || existingProduct.tag,
-            category: category || existingProduct.category
+            title: title !== undefined ? title : existingProduct.title,
+            des: des !== undefined ? des : existingProduct.des,
+            rating: rating !== undefined ? rating : existingProduct.rating,
+            price: price !== undefined ? price : existingProduct.price,
+            weight: weight !== undefined ? weight : existingProduct.weight,
+            tag: tag !== undefined ? tag : existingProduct.tag,
+            category: category !== undefined ? category : existingProduct.category,
+            h: h !== undefined ? h : existingProduct.h,
+            w: w !== undefined ? w : existingProduct.w,
+            l: l !== undefined ? l : existingProduct.l,
+            s_trap: s_trap !== undefined ? s_trap : existingProduct.s_trap,
+            p_trap: p_trap !== undefined ? p_trap : existingProduct.p_trap,
+            size: size !== undefined ? size : existingProduct.size
         };
 
-        const updated = await ProductModel.findByIdAndUpdate(
+        console.log("💾 Updating product with data:", updatedData);
+
+        // ✅ Update product in database
+        const updatedProduct = await ProductModel.findByIdAndUpdate(
             id,
             updatedData,
-            { new: true }
+            { new: true, runValidators: true }
         );
+
+        // ✅ Map image URLs for response
+        const responseData = {
+            ...updatedProduct.toObject(),
+            Image: mapImageArray(updatedProduct.Image, req)
+        };
+
+        console.log("✅ Product updated successfully");
 
         res.status(200).json({
             message: "Product updated successfully",
-            data: {
-                ...updated.toObject(),
-                Image: mapImageArray(updated.Image, req)
-            }
+            data: responseData
         });
+
     } catch (err) {
         console.error("❌ Edit product error:", err);
         res.status(500).json({
-            message: "Update failed",
+            message: "Failed to update product",
             error: err.message
         });
     }
 };
+
 
 // === Get Products by Category ===
 export const Product_category = async (req, res) => {

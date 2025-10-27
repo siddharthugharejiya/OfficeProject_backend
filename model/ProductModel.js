@@ -16,6 +16,7 @@ const productSchema = mongoose.Schema({
     h: String,
     w: String,
     s_trap: String,
+    size : String,
     p_trap: String,
 
 })
