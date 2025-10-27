@@ -81,7 +81,7 @@ export const AddProduct = async (req, res) => {
             });
         }
 
-        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap, size } = req.body;
+        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap, sizes } = req.body;
 
         // ✅ Validation
         if (!name || !name.trim()) {
@@ -127,6 +127,23 @@ export const AddProduct = async (req, res) => {
 
         console.log("📸 Final image array:", imageArray);
 
+        // ✅ Parse sizes array
+        let sizesArray = [];
+        if (sizes) {
+            try {
+                if (typeof sizes === 'string') {
+                    sizesArray = JSON.parse(sizes);
+                } else if (Array.isArray(sizes)) {
+                    sizesArray = sizes;
+                }
+                // Filter out empty sizes
+                sizesArray = sizesArray.filter(size => size && size.trim() !== '');
+            } catch (e) {
+                console.log("❌ Error parsing sizes:", e.message);
+                sizesArray = [];
+            }
+        }
+
         // ✅ Create product - INCLUDING ALL FIELDS
         const productData = {
             name: name.trim(),
@@ -139,7 +156,7 @@ export const AddProduct = async (req, res) => {
             tag: tag || "",
             category: category || "",
             h: h || "",
-            size: size || "",
+            sizes: sizesArray, // ✅ Now storing as array
             w: w || "",
             l: l || "",
             s_trap: s_trap || "",
@@ -163,7 +180,6 @@ export const AddProduct = async (req, res) => {
         });
     }
 };
-
 // === Get All Products ===
 export const getProduct = async (req, res) => {
     try {
