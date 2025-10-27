@@ -16,7 +16,10 @@ const productSchema = mongoose.Schema({
     h: String,
     w: String,
     s_trap: { type: String },
-    size: [String],
+    sizes: {
+        type: [String],
+        default: []  // ✅ Default empty array
+    },
     p_trap: String,
 
 })

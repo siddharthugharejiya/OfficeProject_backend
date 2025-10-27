@@ -81,7 +81,7 @@ export const AddProduct = async (req, res) => {
             });
         }
 
-        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap, sizes } = req.body;
+        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap, size1, size2 } = req.body;
 
         // ✅ Validation
         if (!name || !name.trim()) {
@@ -127,22 +127,18 @@ export const AddProduct = async (req, res) => {
 
         console.log("📸 Final image array:", imageArray);
 
-        // ✅ Parse sizes array
-        let sizesArray = [];
-        if (sizes) {
-            try {
-                if (typeof sizes === 'string') {
-                    sizesArray = JSON.parse(sizes);
-                } else if (Array.isArray(sizes)) {
-                    sizesArray = sizes;
-                }
-                // Filter out empty sizes
-                sizesArray = sizesArray.filter(size => size && size.trim() !== '');
-            } catch (e) {
-                console.log("❌ Error parsing sizes:", e.message);
-                sizesArray = [];
-            }
+        // ✅ Handle sizes - create array from individual size fields
+        const sizesArray = [];
+        if (size1 && size1.trim() !== '') {
+            console.log("✅ Adding size1:", size1);
+            sizesArray.push(size1.trim());
         }
+        if (size2 && size2.trim() !== '') {
+            console.log("✅ Adding size2:", size2);
+            sizesArray.push(size2.trim());
+        }
+
+        console.log("📏 Final sizes array:", sizesArray);
 
         // ✅ Create product - INCLUDING ALL FIELDS
         const productData = {
@@ -156,13 +152,14 @@ export const AddProduct = async (req, res) => {
             tag: tag || "",
             category: category || "",
             h: h || "",
-            sizes: sizesArray, // ✅ Now storing as array
+            sizes: sizesArray, // ✅ Store as array
             w: w || "",
             l: l || "",
             s_trap: s_trap || "",
             p_trap: p_trap || ""
         };
 
+        console.log("💾 Creating product with data:", productData);
         const product = await ProductModel.create(productData);
 
         res.status(201).json({
@@ -180,6 +177,7 @@ export const AddProduct = async (req, res) => {
         });
     }
 };
+
 // === Get All Products ===
 export const getProduct = async (req, res) => {
     try {
@@ -319,7 +317,8 @@ export const edite_post = async (req, res) => {
             l,
             s_trap,
             p_trap,
-            size
+            size1,
+            size2
         } = req.body;
 
         const { id } = req.params;
@@ -387,6 +386,19 @@ export const edite_post = async (req, res) => {
             }
         }
 
+        // ✅ Handle sizes for edit - create array from individual size fields
+        const sizesArray = [];
+        if (size1 && size1.trim() !== '') {
+            console.log("✅ Adding size1:", size1);
+            sizesArray.push(size1.trim());
+        }
+        if (size2 && size2.trim() !== '') {
+            console.log("✅ Adding size2:", size2);
+            sizesArray.push(size2.trim());
+        }
+
+        console.log("📏 Sizes array for update:", sizesArray);
+
         // ✅ Ensure at least one image exists
         if (imageArray.length === 0) {
             return res.status(400).json({ message: "At least one image is required" });
@@ -410,7 +422,7 @@ export const edite_post = async (req, res) => {
             l: l !== undefined ? l : existingProduct.l,
             s_trap: s_trap !== undefined ? s_trap : existingProduct.s_trap,
             p_trap: p_trap !== undefined ? p_trap : existingProduct.p_trap,
-            size: size !== undefined ? size : existingProduct.size
+            sizes: sizesArray // ✅ Update sizes array
         };
 
         console.log("💾 Updating product with data:", updatedData);
@@ -447,7 +459,6 @@ export const edite_post = async (req, res) => {
         });
     }
 };
-
 // === Get Products by Category ===
 export const Product_category = async (req, res) => {
     const category = req.params.category;
