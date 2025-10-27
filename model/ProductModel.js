@@ -15,7 +15,7 @@ const productSchema = mongoose.Schema({
     l: String,
     h: String,
     w: String,
-    s_trap: String,
+    s_trap: {type :[String] , default: []},
     size : String,
     p_trap: String,
 
