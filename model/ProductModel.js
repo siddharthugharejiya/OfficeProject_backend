@@ -21,6 +21,8 @@ const productSchema = mongoose.Schema({
         default: []  // ✅ Default empty array
     },
     p_trap: String,
+    Set: { type: String },
+    Basin: { type: String }
 
 })
 export const ProductModel = mongoose.model("product", productSchema)

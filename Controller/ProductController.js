@@ -65,9 +65,6 @@ const mapImageArray = (images, req) => {
 
 export const AddProduct = async (req, res) => {
     try {
-        console.log("📥 Add Product Request Received");
-        console.log("📋 Request body:", req.body);
-        console.log("📁 Files received:", req.files ? req.files.length : 0);
 
         if (req.files) {
             req.files.forEach((file, index) => {
@@ -81,7 +78,7 @@ export const AddProduct = async (req, res) => {
             });
         }
 
-        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap, size1, size2 } = req.body;
+        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap, size1, size2, Set, Basin } = req.body;
 
         // ✅ Validation
         if (!name || !name.trim()) {
@@ -156,7 +153,9 @@ export const AddProduct = async (req, res) => {
             w: w || "",
             l: l || "",
             s_trap: s_trap || "",
-            p_trap: p_trap || ""
+            p_trap: p_trap || "",
+            Set: Set || "",
+            Basin: Basin || ""
         };
 
         console.log("💾 Creating product with data:", productData);
@@ -318,7 +317,9 @@ export const edite_post = async (req, res) => {
             s_trap,
             p_trap,
             size1,
-            size2
+            size2,
+            Set,
+            Basin
         } = req.body;
 
         const { id } = req.params;
@@ -422,7 +423,9 @@ export const edite_post = async (req, res) => {
             l: l !== undefined ? l : existingProduct.l,
             s_trap: s_trap !== undefined ? s_trap : existingProduct.s_trap,
             p_trap: p_trap !== undefined ? p_trap : existingProduct.p_trap,
-            sizes: sizesArray // ✅ Update sizes array
+            sizes: sizesArray, // ✅ Update sizes array
+            Set: Set !== undefined ? Set : existingProduct.Set,
+            Basin: Basin !== undefined ? Basin : existingProduct.Basin
         };
 
         console.log("💾 Updating product with data:", updatedData);
