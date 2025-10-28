@@ -78,7 +78,7 @@ export const AddProduct = async (req, res) => {
             });
         }
 
-        const { name, title, des, rating, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap, size1, size2, Set, Basin } = req.body;
+        const { name, title, des, rating, pedestal, price, weight, tag, category, linkImages, h, w, l, s_trap, p_trap, size1, size2, Set, Basin } = req.body;
 
         // ✅ Validation
         if (!name || !name.trim()) {
@@ -155,7 +155,8 @@ export const AddProduct = async (req, res) => {
             s_trap: s_trap || "",
             p_trap: p_trap || "",
             Set: Set || "",
-            Basin: Basin || ""
+            Basin: Basin || "",
+            pedestal: pedestal || ""
         };
 
         console.log("💾 Creating product with data:", productData);
@@ -319,7 +320,7 @@ export const edite_post = async (req, res) => {
             size1,
             size2,
             Set,
-            Basin
+            Basin, pedestal
         } = req.body;
 
         const { id } = req.params;
@@ -425,7 +426,8 @@ export const edite_post = async (req, res) => {
             p_trap: p_trap !== undefined ? p_trap : existingProduct.p_trap,
             sizes: sizesArray, // ✅ Update sizes array
             Set: Set !== undefined ? Set : existingProduct.Set,
-            Basin: Basin !== undefined ? Basin : existingProduct.Basin
+            Basin: Basin !== undefined ? Basin : existingProduct.Basin,
+            pedestal: pedestal !== undefined ? pedestal : existingProduct.pedestal
         };
 
         console.log("💾 Updating product with data:", updatedData);
