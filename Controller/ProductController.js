@@ -155,6 +155,7 @@ export const AddProduct = async (req, res) => {
             s_trap: s_trap || "",
             p_trap: p_trap || "",
             Set: Set || "",
+            semi: Set || "",
             Basin: Basin || "",
             pedestal: pedestal || ""
         };
@@ -313,6 +314,7 @@ export const edite_post = async (req, res) => {
             category,
             linkImages,
             h,
+            semi,
             w,
             l,
             s_trap,
@@ -426,6 +428,7 @@ export const edite_post = async (req, res) => {
             p_trap: p_trap !== undefined ? p_trap : existingProduct.p_trap,
             sizes: sizesArray, // ✅ Update sizes array
             Set: Set !== undefined ? Set : existingProduct.Set,
+            semi: semi !== undefined ? semi : existingProduct.semi,
             Basin: Basin !== undefined ? Basin : existingProduct.Basin,
             pedestal: pedestal !== undefined ? pedestal : existingProduct.pedestal
         };
