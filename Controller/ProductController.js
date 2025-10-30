@@ -155,7 +155,7 @@ export const AddProduct = async (req, res) => {
             s_trap: s_trap || "",
             p_trap: p_trap || "",
             Set: Set || "",
-            semi: Set || "",
+            semi: semi || "",
             Basin: Basin || "",
             pedestal: pedestal || ""
         };

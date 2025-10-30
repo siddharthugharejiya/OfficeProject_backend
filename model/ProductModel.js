@@ -24,7 +24,7 @@ const productSchema = mongoose.Schema({
     Set: { type: String },
     Basin: { type: String },
     pedestal : { type: String },
-    pedestal : { type: String },
+    semi : { type: String },
 
 })
 export const ProductModel = mongoose.model("product", productSchema)
